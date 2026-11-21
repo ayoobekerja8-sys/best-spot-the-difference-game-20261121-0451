@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Twin Lanterns: Spot the Difference</title>
+<link rel="icon" href="data:,">
+<style>
+  :root {
+    --ink: #f6efe3;
+    --muted: #a9a2b8;
+    --gold: #ffcf7a;
+    --gold-deep: #e8a33d;
+    --plum: #1a1426;
+    --plum-2: #241b34;
+    --panel: #2b2140;
+    --good: #7ce3b0;
+    --bad: #ff7a6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(900px 500px at 12% -10%, rgba(255, 191, 105, 0.16), transparent 60%),
+      radial-gradient(900px 600px at 92% 8%, rgba(120, 160, 255, 0.13), transparent 62%),
+      linear-gradient(180deg, #191223 0%, #120e1b 55%, #0d0a14 100%);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    overflow: hidden;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; padding: 12px 18px 14px; gap: 10px; }
+
+  /* ------------------------------------------------------------------ HUD */
+  #hud { flex: 0 0 auto; display: flex; flex-direction: column; gap: 8px; }
+  .hud-row { display: flex; align-items: center; gap: 18px; }
+  .hud-level { min-width: 250px; display: flex; flex-direction: column; gap: 2px; }
+  .brand {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    color: var(--gold);
+    line-height: 1.1;
+  }
+  .brand small { color: var(--muted); font-family: system-ui, sans-serif; font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; display: block; margin-top: 3px; }
+  .level-line { font-size: 13px; color: var(--muted); }
+  .level-line strong { color: var(--ink); font-weight: 600; }
+
+  .hud-counter {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+  #counter {
+    font-size: 21px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    background: linear-gradient(180deg, #fff6e4, #ffd58f);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    white-space: nowrap;
+  }
+  #counter .rest { color: #ffb37a; -webkit-text-fill-color: #ffb37a; }
+  #dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; max-width: 420px; }
+  #dots i {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    transition: background 160ms ease, transform 160ms ease;
+  }
+  #dots i.on { background: var(--gold); box-shadow: 0 0 8px rgba(255, 207, 122, 0.8); transform: scale(1.15); }
+
+  .hud-score { min-width: 118px; text-align: right; display: flex; flex-direction: column; }
+  .hud-score span { font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+  .hud-score strong { font-size: 24px; font-variant-numeric: tabular-nums; line-height: 1.05; }
+
+  .hud-tools { gap: 10px; }
+  .timer { flex: 1 1 auto; display: flex; align-items: center; gap: 12px; }
+  .timer-track {
+    position: relative;
+    flex: 1 1 auto;
+    height: 13px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.55);
+    overflow: hidden;
+  }
+  #timer-fill {
+    display: block; height: 100%; width: 100%;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #6fe3b0, #ffd166 55%, #ff9d5c);
+    transform-origin: left center;
+    transition: background 300ms ease;
+  }
+  .timer.urgent #timer-fill { background: linear-gradient(90deg, #ff9d5c, #ff5f6d); }
+  #timer-label { font-variant-numeric: tabular-nums; font-size: 15px; font-weight: 700; color: var(--ink); min-width: 52px; text-align: right; }
+  .timer.urgent #timer-label { color: var(--bad); animation: blink 0.8s steps(2, start) infinite; }
+  @keyframes blink { 50% { opacity: 0.35; } }
+
+  button {
+    font: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: linear-gradient(180deg, #3a2c52, #2a2040);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 9px;
+    padding: 8px 14px;
+    cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    transition: transform 90ms ease, background 140ms ease, opacity 140ms ease;
+  }
+  button:hover { background: linear-gradient(180deg, #493763, #33264c); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: 0.4; cursor: default; }
+  button.primary {
+    background: linear-gradient(180deg, #ffd98d, #e8a33d);
+    color: #2a1a08;
+    border-color: rgba(255, 255, 255, 0.45);
+  }
+  button.primary:hover { background: linear-gradient(180deg, #ffe6a8, #f0b152); }
+  kbd {
+    font: inherit; font-size: 10px; font-weight: 700;
+    padding: 1px 5px; margin-left: 6px; border-radius: 4px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: inherit;
+  }
+
+  /* --------------------------------------------------------------- panels */
+  #stage {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+  }
+  .panel { margin: 0; display: flex; flex-direction: column; gap: 7px; align-items: center; min-height: 0; }
+  .panel canvas {
+    display: block;
+    width: min(46vw, calc((100vh - 205px) * 0.9333));
+    height: auto;
+    border-radius: 14px;
+    background: #0b0813;
+    box-shadow:
+      0 0 0 1px rgba(255, 207, 122, 0.35),
+      0 0 0 6px rgba(255, 255, 255, 0.03),
+      0 18px 40px rgba(0, 0, 0, 0.55);
+    cursor: crosshair;
+    touch-action: manipulation;
+  }
+  .panel figcaption {
+    font-size: 11px;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel figcaption b { color: var(--gold); font-weight: 700; }
+
+  /* ------------------------------------------------------------- overlays */
+  .overlay {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(10, 7, 18, 0.78);
+    backdrop-filter: blur(6px);
+    z-index: 10;
+    padding: 24px;
+  }
+  .overlay.hidden { display: none; }
+  .overlay.clear { background: rgba(10, 7, 18, 0.34); backdrop-filter: none; }
+  #win-screen, #over-screen { align-items: flex-end; padding: 0 18px 16px; }
+  #win-screen .card, #over-screen .card { width: min(1060px, 100%); padding: 18px 26px 20px; }
+  #win-screen .card h2, #over-screen .card h2 { font-size: 27px; margin-bottom: 2px; }
+  #win-screen .stars { font-size: 34px; margin: 4px 0 0; }
+  #win-screen .big-score { font-size: 34px; margin: 0; }
+  #win-screen .lines, #over-screen .lines { margin-bottom: 12px; line-height: 1.5; font-size: 13px; }
+  .win-grid { display: flex; align-items: center; justify-content: center; gap: 34px; margin-bottom: 10px; }
+  .card {
+    width: min(880px, 100%);
+    max-height: 92vh;
+    overflow: auto;
+    background: linear-gradient(180deg, rgba(44, 33, 64, 0.97), rgba(26, 20, 38, 0.98));
+    border: 1px solid rgba(255, 207, 122, 0.3);
+    border-radius: 20px;
+    box-shadow: 0 30px 90px rgba(0, 0, 0, 0.6);
+    padding: 28px 32px 30px;
+    text-align: center;
+  }
+  .card h1 {
+    margin: 0;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 44px;
+    letter-spacing: 0.02em;
+    color: var(--gold);
+  }
+  .card h2 {
+    margin: 0 0 6px;
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 34px;
+    color: var(--gold);
+  }
+  .card .sub { margin: 6px 0 18px; color: var(--muted); font-size: 14px; }
+  .how {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 18px 0 22px;
+    text-align: left;
+  }
+  .how div {
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #ded6ea;
+  }
+  .how b { display: block; color: var(--gold); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+  .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+  .level-card {
+    background: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 10px 10px 12px;
+    cursor: pointer;
+    transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
+    color: inherit;
+    font: inherit;
+  }
+  .level-card:hover { border-color: rgba(255, 207, 122, 0.6); transform: translateY(-2px); background: rgba(0, 0, 0, 0.3); }
+  .level-card canvas { display: block; width: 100%; border-radius: 9px; background: #0b0813; }
+  .level-card .name { display: block; margin-top: 8px; font-weight: 700; font-size: 14px; }
+  .level-card .meta { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .stars { display: flex; gap: 14px; justify-content: center; margin: 12px 0 6px; font-size: 44px; line-height: 1; }
+  .stars span { color: rgba(255, 255, 255, 0.14); }
+  .stars span.on { color: var(--gold); text-shadow: 0 0 22px rgba(255, 207, 122, 0.6); }
+  .big-score { font-size: 46px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 4px 0 2px; }
+  .lines { color: var(--muted); font-size: 13.5px; line-height: 1.7; margin-bottom: 18px; }
+  .lines b { color: var(--ink); }
+  .note { color: var(--muted); font-size: 12px; margin-top: 16px; }
+  .note kbd { margin-left: 3px; }
+  #toast {
+    position: fixed;
+    left: 50%;
+    bottom: 26px;
+    transform: translate(-50%, 12px);
+    background: rgba(24, 18, 36, 0.94);
+    border: 1px solid rgba(255, 207, 122, 0.4);
+    color: var(--ink);
+    padding: 9px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 200ms ease, transform 200ms ease;
+    z-index: 20;
+  }
+  #toast.show { opacity: 1; transform: translate(-50%, 0); }
+  #status { position: absolute; top: 0; left: 0; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <div class="hud-row">
+      <div class="hud-level">
+        <span class="brand">Twin Lanterns<small>spot the difference</small></span>
+        <span class="level-line" id="level-line">Level 1 · <strong>Sunny Park</strong></span>
+      </div>
+      <div class="hud-counter">
+        <span id="counter">Found 0 of 7 — 7 remaining</span>
+        <span id="dots"></span>
+      </div>
+      <div class="hud-score">
+        <span>Score</span>
+        <strong id="score">0</strong>
+      </div>
+    </div>
+    <div class="hud-row hud-tools">
+      <div class="timer" id="timer">
+        <div class="timer-track"><i id="timer-fill"></i></div>
+        <span id="timer-label">2:00</span>
+      </div>
+      <button id="hint-button" type="button">Hint <kbd>H</kbd></button>
+      <button id="pause-button" type="button">Pause <kbd>P</kbd></button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <figure class="panel">
+      <canvas id="left-canvas" width="560" height="600" aria-label="Original scene"></canvas>
+      <figcaption>Original</figcaption>
+    </figure>
+    <figure class="panel">
+      <canvas id="right-canvas" width="560" height="600" aria-label="Altered scene: click a difference here or on the left"></canvas>
+      <figcaption><b>Altered</b> · click a difference on either picture</figcaption>
+    </figure>
+  </main>
+</div>
+
+<section class="overlay hidden" id="start-screen" aria-label="Start screen">
+  <div class="card">
+    <h1>Twin Lanterns</h1>
+    <p class="sub">Two pictures. One is a little changed. Find every difference before the clock runs out.</p>
+    <div class="how">
+      <div><b>1 · Compare</b>The left picture is the original. The right one hides small changes: something missing, recoloured, flipped or moved.</div>
+      <div><b>2 · Click</b>Click a difference on <em>either</em> picture. A ring marks it and a chime rings. Wrong clicks cost 25 points.</div>
+      <div><b>3 · Clear</b>Three hints a level. Finish to earn stars: the more clock left, the more stars. H = hint, P = pause.</div>
+    </div>
+    <div class="levels" id="level-cards"></div>
+    <div class="actions">
+      <button class="primary" id="start-button" type="button">Start level 1 <kbd>Space</kbd></button>
+    </div>
+    <p class="note">Mouse to mark · <kbd>H</kbd> hint · <kbd>P</kbd> pause · <kbd>R</kbd> restart</p>
+  </div>
+</section>
+
+<section class="overlay clear hidden" id="win-screen" aria-label="Level complete">
+  <div class="card">
+    <h2 id="win-title">Level cleared</h2>
+    <div class="win-grid">
+      <div class="stars" id="win-stars"><span>★</span><span>★</span><span>★</span></div>
+      <div class="big-score" id="win-score">0</div>
+    </div>
+    <div class="lines" id="win-lines"></div>
+    <div class="actions">
+      <button class="primary" id="next-button" type="button">Next level <kbd>N</kbd></button>
+      <button id="replay-button" type="button">Replay level <kbd>R</kbd></button>
+      <button id="home-button" type="button">Level select</button>
+    </div>
+  </div>
+</section>
+
+<section class="overlay clear hidden" id="over-screen" aria-label="Time up">
+  <div class="card">
+    <h2>Time's up</h2>
+    <p class="sub" id="over-line">You found 0 of 7 differences.</p>
+    <div class="lines" id="over-lines"></div>
+    <div class="actions">
+      <button class="primary" id="retry-button" type="button">Try again <kbd>R</kbd></button>
+      <button id="over-home-button" type="button">Level select</button>
+    </div>
+  </div>
+</section>
+
+<section class="overlay hidden" id="pause-screen" aria-label="Paused">
+  <div class="card">
+    <h2>Paused</h2>
+    <p class="sub">The clock is stopped. Take your time.</p>
+    <div class="actions">
+      <button class="primary" id="resume-button" type="button">Resume <kbd>P</kbd></button>
+      <button id="pause-restart-button" type="button">Restart level <kbd>R</kbd></button>
+      <button id="pause-home-button" type="button">Level select</button>
+    </div>
+  </div>
+</section>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<p id="status" role="status" aria-live="polite"></p>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

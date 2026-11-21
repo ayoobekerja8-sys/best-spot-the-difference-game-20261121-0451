@@ -1,0 +1,5 @@
+[
+  { "name": "1-play.jpg", "query": "?level=1&found=3", "note": "level 1 mid-play, three found, four remaining" },
+  { "name": "2-start.jpg", "query": "/", "note": "start screen with the three level cards" },
+  { "name": "3-end.jpg", "query": "?level=1&found=all", "note": "level 1 cleared: stars, score, next level" }
+]
